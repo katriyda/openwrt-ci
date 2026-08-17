@@ -1,0 +1,2 @@
+# Windows 本地检出统一使用 LF，避免 CRLF 干扰脚本执行与静态检查
+*.sh text eol=lf
