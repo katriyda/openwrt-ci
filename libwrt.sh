@@ -9,3 +9,8 @@ sed -i "s/hostname='LibWrt'/hostname='ZN-M2'/g" package/base-files/files/bin/con
 sed -i "s/option lang auto/option lang zh_cn/g" feeds/luci/modules/luci-base/root/etc/config/luci
 # 默认 argon 主题
 sed -i "s#option mediaurlbase /luci-static/bootstrap#option mediaurlbase /luci-static/argon#g" feeds/luci/modules/luci-base/root/etc/config/luci
+# ---- momo feed：nikkinikki OpenWrt-momo（基于 sing-box 的透明代理）----
+# 源追加到 feeds.conf.default 后单独 update+install（workflow 的 feeds update -a 早于本脚本执行）
+echo "src-git momo https://github.com/nikkinikki-org/OpenWrt-momo.git;main" >> feeds.conf.default
+./scripts/feeds update momo
+./scripts/feeds install -a -p momo
