@@ -9,8 +9,10 @@ permissions:
   contents: write
 
 env:
-  REPO_URL: https://github.com/LiBwrt/openwrt-6.x.git
-  REPO_BRANCH: main-nss
+  # 上游 2026-09 更名：LiBwrt/openwrt-6.x -> LiBwrt/LibWrt，唯一分支 25.12-nss
+  # （旧 main-nss 已删除；run #44/2026-09-13 起 clone 失败，最后一次成功为 #43）
+  REPO_URL: https://github.com/LiBwrt/LibWrt.git
+  REPO_BRANCH: 25.12-nss
   CONFIG_FILE: configs/ipq60xx-6.12-nowifi.config
   DIY_SCRIPT: libwrt.sh
   CLASH_KERNEL: amd64
