@@ -9,21 +9,26 @@ sed -i "s/hostname='LibWrt'/hostname='ZN-M2'/g" package/base-files/files/bin/con
 sed -i "s/option lang auto/option lang zh_cn/g" feeds/luci/modules/luci-base/root/etc/config/luci
 # 默认 argon 主题
 sed -i "s#option mediaurlbase /luci-static/bootstrap#option mediaurlbase /luci-static/argon#g" feeds/luci/modules/luci-base/root/etc/config/luci
-# ---- momo feed：nikkinikki OpenWrt-momo（基于 sing-box 的透明代理）----
-# 源追加到 feeds.conf.default 后单独 update+install（workflow 的 feeds update -a 早于本脚本执行）
-echo "src-git momo https://github.com/nikkinikki-org/OpenWrt-momo.git;main" >> feeds.conf.default
-./scripts/feeds update momo
-./scripts/feeds install -a -p momo
 
-# ---- mimic feed：hack3ric/mimic（eBPF 把 UDP 伪装成 TCP；hysteria2 ≥2.12 内置集成）----
-# 只登记 feed（仓库极小），是否编译由 .config 的 CONFIG_PACKAGE_mimic / kmod-mimic 决定
+# ---- 自定义 feed：mimic 先装、momo 最后装 ----
+# 顺序有实际影响：9-14 之后 mimic 成为最后一个 feed 操作，momo 随即从 .config 消失（见 archive 记录）。
+# 源追加到 feeds.conf.default 后单独 update+install（workflow 的 feeds update -a 早于本脚本执行）
+
+# mimic feed：hack3ric/mimic（eBPF 把 UDP 伪装成 TCP；hysteria2 ≥2.12 内置集成）
+# 是否编译由 .config 的 CONFIG_PACKAGE_mimic / kmod-mimic 决定
 echo "src-git mimic https://github.com/hack3ric/mimic;openwrt" >> feeds.conf.default
 ./scripts/feeds update mimic
 ./scripts/feeds install -a -p mimic
 
-# ---- hysteria 钉住到 v2.12.2（mimic 集成自 2.12.0 起；immortalwrt/packages 停滞在 2.7.0）----
-# 仅当选中 CONFIG_PACKAGE_hysteria 时才参与编译；feed 追上后下方 sed 匹配不到旧串，钉住自动失效
-# 版本/HASH 来源：HyNetworks/hysteria tag app/v2.12.2（apernet→HyNetworks 同仓库，tarball 逐字节一致）
-sed -i 's#PKG_VERSION:=2.7.0#PKG_VERSION:=2.12.2#' feeds/packages/net/hysteria/Makefile
-sed -i 's#PKG_HASH:=3cac6adeccdac7cc8b353948e3cead1eb8606aa8ce74dac4853d821a22ceeba7#PKG_HASH:=8db04a112e73685a1e5916d5d4d3df3ed897dbabc3e639fda4880b7ca9a7d18e#' feeds/packages/net/hysteria/Makefile
-sed -i 's#codeload.github.com/apernet/hysteria#codeload.github.com/HyNetworks/hysteria#' feeds/packages/net/hysteria/Makefile
+# momo feed：nikkinikki OpenWrt-momo（基于 sing-box 的透明代理）
+echo "src-git momo https://github.com/nikkinikki-org/OpenWrt-momo.git;main" >> feeds.conf.default
+./scripts/feeds update momo
+./scripts/feeds install -a -p momo
+
+# ---- 断言：自定义 feed 的包必须真的被 make defconfig 保留 ----
+# 不满足就让整轮在几分钟内失败，而不是跑到产物阶段才发现包缺失
+make defconfig >/dev/null 2>&1 || { echo "FATAL: make defconfig failed" >&2; exit 1; }
+for sym in PACKAGE_momo PACKAGE_luci-app-momo PACKAGE_mimic PACKAGE_kmod-mimic; do
+    grep -qx "CONFIG_${sym}=y" .config || { echo "FATAL: CONFIG_${sym} not selected after defconfig (feed link lost?)" >&2; exit 1; }
+done
+echo "custom package check: OK"
