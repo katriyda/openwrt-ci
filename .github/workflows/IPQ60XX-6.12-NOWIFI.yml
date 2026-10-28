@@ -2,6 +2,17 @@ name: IPQ60XX-6.12-NOWIFI
 
 on:
   workflow_dispatch:
+  # 该仓库是 breeze303/openwrt-ci 的 fork，GitHub 以 "fork Actions 用量" 为由停用了
+  # workflow_dispatch（API 报 422 Actions has been disabled），但仓库设置中 enabled=true，
+  # 因此改用 push / repository_dispatch 触发：改动构建输入即编译（archive/20261029-firmware-refresh）
+  push:
+    branches: [ main ]
+    paths:
+      - 'configs/**'
+      - 'libwrt.sh'
+      - '.github/workflows/IPQ60XX-6.12-NOWIFI.yml'
+  repository_dispatch:
+    types: [ rebuild ]
   schedule:
     - cron: 0 19 * * *
 
