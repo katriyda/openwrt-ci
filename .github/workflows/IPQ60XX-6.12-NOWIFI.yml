@@ -35,7 +35,9 @@ env:
 
 jobs:
   Build:
-    runs-on: ubuntu-latest
+    # 钉住 LTS：ubuntu-latest 已滚到 immortalwrt init 脚本不认的新 codename
+    # （报 "Unsupported OS, use Ubuntu 20.04 instead"），脚本支持表含 noble
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Check Server Performance(检查服务器性能)
