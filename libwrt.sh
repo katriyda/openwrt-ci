@@ -25,9 +25,20 @@ echo "src-git momo https://github.com/nikkinikki-org/OpenWrt-momo.git;main" >> f
 ./scripts/feeds update momo
 ./scripts/feeds install -a -p momo
 
+# ---- 两遍 defconfig：第一遍补齐依赖符号，第二遍保住自定义包 ----
+# configs/*.config 是片段式配置（不含 CONFIG_IPV6、CONFIG_PACKAGE_libc 等由 defconfig
+# 补默认的符号）。单遍 defconfig 时 kconfig 先解析到 PACKAGE_momo，它的
+# `depends on PACKAGE_firewall4` 链条（firewall4 又 depends on IPV6）在第一遍还没定型，
+# CONFIG_PACKAGE_momo=y / mimic=y 就被静默丢弃（无任何 warning），断言随即失败。
+# 第一遍把 .config 规范化；第二遍前恢复原始配置再跑，依赖已明确，包即被保留。
+cp .config .config.seed
+make defconfig >/dev/null 2>&1 || { echo "FATAL: make defconfig failed (pass 1)" >&2; exit 1; }
+cp .config.seed .config
+make defconfig >/dev/null 2>&1 || { echo "FATAL: make defconfig failed (pass 2)" >&2; exit 1; }
+rm -f .config.seed
+
 # ---- 断言：自定义 feed 的包必须真的被 make defconfig 保留 ----
 # 不满足就让整轮在几分钟内失败，而不是跑到产物阶段才发现包缺失
-make defconfig >/dev/null 2>&1 || { echo "FATAL: make defconfig failed" >&2; exit 1; }
 for sym in PACKAGE_momo PACKAGE_luci-app-momo PACKAGE_mimic PACKAGE_kmod-mimic; do
     grep -qx "CONFIG_${sym}=y" .config || { echo "FATAL: CONFIG_${sym} not selected after defconfig (feed link lost?)" >&2; exit 1; }
 done
