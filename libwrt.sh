@@ -38,10 +38,13 @@ cp .config.seed .config
 make defconfig >/tmp/dc2.log 2>&1 || { echo "FATAL: make defconfig failed (pass 2)" >&2; tail -20 /tmp/dc2.log >&2; exit 1; }
 echo "DIAG pass2: momo=$(grep -c '^CONFIG_PACKAGE_momo=y' .config) fw4=$(grep -c '^CONFIG_PACKAGE_firewall4=y' .config) ipv6=$(grep -c '^CONFIG_IPV6=y' .config) libc=$(grep -c '^CONFIG_PACKAGE_libc=y' .config)"
 echo "DIAG cpi: momo_nodes=$(grep -c 'config PACKAGE_momo$' tmp/.config-package.in) mimic_nodes=$(grep -c 'config PACKAGE_mimic$' tmp/.config-package.in)"
-echo "DIAG pkg.in momo block:"; grep -n -A14 'config PACKAGE_momo$' tmp/.config-package.in | head -20
-echo "DIAG pkg.in firewall4 block:"; grep -n -A8 'config PACKAGE_firewall4$' tmp/.config-package.in | head -12
-echo "DIAG .config after pass2:"; grep -n 'PACKAGE_momo\|PACKAGE_luci-app-momo\|PACKAGE_mimic=\|PACKAGE_kmod-mimic' .config || true
-echo "DIAG dc2 log tail:"; tail -10 /tmp/dc2.log
+echo "DIAG last structure line before momo:"; awk 'NR<134943 && /^[[:space:]]*(if|endif|menu|endmenu|choice|endchoice)/ {last=NR": "$0} END{print last}' tmp/.config-package.in
+echo "DIAG pkg.in head:"; head -10 tmp/.config-package.in
+echo "DIAG momo full block:"; awk 'NR>=134943 && NR<=134962' tmp/.config-package.in
+echo "DIAG glibc syms:"; grep -n -A4 -E '^[[:space:]]*config (USE_GLIBC|LIBCURL_LDAP)$' tmp/.config-package.in || true
+echo "DIAG glibc vals:"; grep -n 'USE_GLIBC\|LIBCURL_LDAP' .config || true
+echo "DIAG direct conf --defconfig:"; cp .config.seed .config.diag; ./scripts/config/conf --defconfig=.config.diag Config.in </dev/null 2>&1 | tail -25; echo "conf exit=$?"; grep -n 'PACKAGE_momo=' .config.diag || true
+echo "DIAG direct conf --olddefconfig:"; ./scripts/config/conf --olddefconfig=.config.diag Config.in </dev/null >/tmp/od.log 2>&1; echo "olddef exit=$?"; grep -n 'PACKAGE_momo=' .config.diag || true; tail -5 /tmp/od.log
 rm -f .config.seed
 
 # ---- 断言：自定义 feed 的包必须真的被 make defconfig 保留 ----
