@@ -39,14 +39,12 @@ cp .config.seed .config
 make defconfig >/tmp/dc2.log 2>&1 || { echo "FATAL: make defconfig failed (pass 2)" >&2; tail -20 /tmp/dc2.log >&2; exit 1; }
 echo "DIAG pass2: momo=$(grep -c '^CONFIG_PACKAGE_momo=y' .config) fw4=$(grep -c '^CONFIG_PACKAGE_firewall4=y' .config) ipv6=$(grep -c '^CONFIG_IPV6=y' .config) libc=$(grep -c '^CONFIG_PACKAGE_libc=y' .config)"
 echo "DIAG cpi: momo_nodes=$(grep -c 'config PACKAGE_momo$' tmp/.config-package.in) mimic_nodes=$(grep -c 'config PACKAGE_mimic$' tmp/.config-package.in)"
-echo "DIAG last structure line before momo:"; awk 'NR<134943 && /^[[:space:]]*(if|endif|menu|endmenu|choice|endchoice)/ {last=NR": "$0} END{print last}' tmp/.config-package.in
-echo "DIAG pkg.in head:"; head -10 tmp/.config-package.in
-echo "DIAG momo full block:"; awk 'NR>=134943 && NR<=134962' tmp/.config-package.in
-echo "DIAG glibc syms:"; grep -n -A4 -E '^[[:space:]]*config (USE_GLIBC|LIBCURL_LDAP)$' tmp/.config-package.in || true
-echo "DIAG glibc vals:"; grep -n 'USE_GLIBC\|LIBCURL_LDAP' .config || true
-echo "DIAG direct conf --defconfig:"; cp .config.seed .config.diag; ./scripts/config/conf --defconfig=.config.diag Config.in </dev/null 2>&1 | tail -25; echo "conf exit=$?"; grep -n 'PACKAGE_momo=' .config.diag || true
-echo "DIAG direct conf --olddefconfig:"; ./scripts/config/conf --olddefconfig=.config.diag Config.in </dev/null >/tmp/od.log 2>&1; echo "olddef exit=$?"; grep -n 'PACKAGE_momo=' .config.diag || true; tail -5 /tmp/od.log
-rm -f .config.seed
+echo "DIAG seed: momo=$(grep -c '^CONFIG_PACKAGE_momo=y' .config.seed || true) mimic=$(grep -c '^CONFIG_PACKAGE_mimic=y' .config.seed || true)"
+echo "DIAG A: conf --defconfig with KCONFIG_CONFIG"; KCONFIG_CONFIG=.config.a ./scripts/config/conf --defconfig=.config.seed Config.in </dev/null >/tmp/a.log 2>&1; echo "A exit=$? momo=$(grep -c '^CONFIG_PACKAGE_momo=y' .config.a || true)"; tail -4 /tmp/a.log
+echo "DIAG B: mini Config.in"; printf 'mainmenu "t"\nsource "tmp/.config-package.in"\n' > /tmp/mini.in; KCONFIG_CONFIG=.config.b ./scripts/config/conf --defconfig=.config.seed /tmp/mini.in </dev/null >/tmp/b.log 2>&1; echo "B exit=$? momo=$(grep -c '^CONFIG_PACKAGE_momo=y' .config.b || true) mimic=$(grep -c '^CONFIG_PACKAGE_mimic=y' .config.b || true)"; tail -4 /tmp/b.log
+echo "DIAG C: feed syms"; grep -n 'FEED_momo\|FEED_mimic' tmp/.config-feeds.in 2>/dev/null | head -5 || true; grep -n 'FEED_momo\|FEED_mimic' .config.seed 2>/dev/null | head -5 || true
+echo "DIAG D: conf opts"; ./scripts/config/conf --help 2>&1 | head -28
+rm -f .config.seed .config.a .config.b
 
 # ---- 断言：自定义 feed 的包必须真的被 make defconfig 保留 ----
 # 不满足就让整轮在几分钟内失败，而不是跑到产物阶段才发现包缺失
