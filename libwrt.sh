@@ -32,9 +32,16 @@ echo "src-git momo https://github.com/nikkinikki-org/OpenWrt-momo.git;main" >> f
 # CONFIG_PACKAGE_momo=y / mimic=y 就被静默丢弃（无任何 warning），断言随即失败。
 # 第一遍把 .config 规范化；第二遍前恢复原始配置再跑，依赖已明确，包即被保留。
 cp .config .config.seed
-make defconfig >/dev/null 2>&1 || { echo "FATAL: make defconfig failed (pass 1)" >&2; exit 1; }
+make defconfig >/tmp/dc1.log 2>&1 || { echo "FATAL: make defconfig failed (pass 1)" >&2; tail -20 /tmp/dc1.log >&2; exit 1; }
+echo "DIAG pass1: momo=$(grep -c '^CONFIG_PACKAGE_momo=y' .config) fw4=$(grep -c '^CONFIG_PACKAGE_firewall4=y' .config) ipv6=$(grep -c '^CONFIG_IPV6=y' .config) libc=$(grep -c '^CONFIG_PACKAGE_libc=y' .config)"
 cp .config.seed .config
-make defconfig >/dev/null 2>&1 || { echo "FATAL: make defconfig failed (pass 2)" >&2; exit 1; }
+make defconfig >/tmp/dc2.log 2>&1 || { echo "FATAL: make defconfig failed (pass 2)" >&2; tail -20 /tmp/dc2.log >&2; exit 1; }
+echo "DIAG pass2: momo=$(grep -c '^CONFIG_PACKAGE_momo=y' .config) fw4=$(grep -c '^CONFIG_PACKAGE_firewall4=y' .config) ipv6=$(grep -c '^CONFIG_IPV6=y' .config) libc=$(grep -c '^CONFIG_PACKAGE_libc=y' .config)"
+echo "DIAG cpi: momo_nodes=$(grep -c 'config PACKAGE_momo$' tmp/.config-package.in) mimic_nodes=$(grep -c 'config PACKAGE_mimic$' tmp/.config-package.in)"
+echo "DIAG pkg.in momo block:"; grep -n -A14 'config PACKAGE_momo$' tmp/.config-package.in | head -20
+echo "DIAG pkg.in firewall4 block:"; grep -n -A8 'config PACKAGE_firewall4$' tmp/.config-package.in | head -12
+echo "DIAG .config after pass2:"; grep -n 'PACKAGE_momo\|PACKAGE_luci-app-momo\|PACKAGE_mimic=\|PACKAGE_kmod-mimic' .config || true
+echo "DIAG dc2 log tail:"; tail -10 /tmp/dc2.log
 rm -f .config.seed
 
 # ---- 断言：自定义 feed 的包必须真的被 make defconfig 保留 ----
