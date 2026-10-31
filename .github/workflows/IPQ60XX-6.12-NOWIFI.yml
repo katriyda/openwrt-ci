@@ -116,8 +116,9 @@ jobs:
   
     - name: Load Custom Configuration(加载自定义配置)
       run: |
-        [ -e files ] && mv files $OPENWRT_PATH/files
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
+        [ -e files ] && mv files $OPENWRT_PATH/files || true
+        echo "DIAG workflow: cwd=$PWD config_exists=$(test -f "$CONFIG_FILE" && echo yes || echo no) momo_lines=$(grep -c '^CONFIG_PACKAGE_momo=y' "$CONFIG_FILE" || true)"
+        cp -f "$CONFIG_FILE" "$OPENWRT_PATH/.config"
         chmod +x $DIY_SCRIPT
         cd $OPENWRT_PATH
         $GITHUB_WORKSPACE/$DIY_SCRIPT
